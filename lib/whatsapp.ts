@@ -1,7 +1,7 @@
 import type { CartItem } from "@/lib/cart-context";
 import { products } from "@/lib/products";
 
-const STORE_WHATSAPP = "5511999999999";
+const STORE_WHATSAPP = "5596991871516";
 
 const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 

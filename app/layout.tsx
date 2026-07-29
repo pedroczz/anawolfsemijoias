@@ -17,7 +17,7 @@ const inter = Inter({
   display: "swap",
 });
 
-const siteUrl = "https://anawolfsemijoias.com.br";
+const siteUrl = "https://anawolfsemijoias.vercel.app";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
