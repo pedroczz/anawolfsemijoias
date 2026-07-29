@@ -1,0 +1,45 @@
+<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="400" fill="#FDFBFA" />
+  <rect x="0.5" y="0.5" width="399" height="399" fill="none" stroke="#CE8A87" stroke-width="1" />
+  <g transform="translate(140,130) scale(0.6)" color="#4E1233">
+    <path
+      d="M84,36
+         C84,30 92,26 100,26
+         C108,26 116,30 116,36
+         L116,50
+         C132,58 148,72 154,92
+         C160,112 158,140 150,164
+         C144,182 132,192 100,192
+         C68,192 56,182 50,164
+         C42,140 40,112 46,92
+         C52,72 68,58 84,50
+         Z"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="3"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M62,86
+         C70,104 84,114 100,114
+         C116,114 130,104 138,86"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="3"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path d="M100,114 L100,132" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+    <path
+      d="M100,132 L108,144 L100,158 L92,144 Z"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="3"
+      stroke-linejoin="round"
+    />
+  </g>
+  <text x="200" y="330" font-family="serif" font-size="16" fill="#6B0A0A" text-anchor="middle">
+    foto em breve
+  </text>
+</svg>
