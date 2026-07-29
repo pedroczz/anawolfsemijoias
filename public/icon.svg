@@ -1,0 +1,41 @@
+<svg width="64" height="64" viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="0" width="200" height="220" rx="100" fill="#4E1233" />
+  <g transform="translate(0,4)">
+    <path
+      d="M84,36
+         C84,30 92,26 100,26
+         C108,26 116,30 116,36
+         L116,50
+         C132,58 148,72 154,92
+         C160,112 158,140 150,164
+         C144,182 132,192 100,192
+         C68,192 56,182 50,164
+         C42,140 40,112 46,92
+         C52,72 68,58 84,50
+         Z"
+      fill="none"
+      stroke="#F1F2DA"
+      stroke-width="6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M62,86
+         C70,104 84,114 100,114
+         C116,114 130,104 138,86"
+      fill="none"
+      stroke="#FBE0B0"
+      stroke-width="6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path d="M100,114 L100,132" stroke="#FBE0B0" stroke-width="6" stroke-linecap="round" />
+    <path
+      d="M100,132 L108,144 L100,158 L92,144 Z"
+      fill="none"
+      stroke="#FBE0B0"
+      stroke-width="6"
+      stroke-linejoin="round"
+    />
+  </g>
+</svg>
