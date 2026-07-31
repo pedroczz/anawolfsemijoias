@@ -6,9 +6,9 @@ type LogoProps = {
 
 /**
  * Busto expositor de joalheria com colar, em traço único (currentColor).
- * Usado como marca da Ana Wolf Semijoias em qualquer cor de texto/fundo.
+ * Usado como marca da Ana Wolf Semijoias e Pratas em qualquer cor de texto/fundo.
  */
-export default function Logo({ className, strokeWidth = 2.2, title = "Ana Wolf Semijoias" }: LogoProps) {
+export default function Logo({ className, strokeWidth = 2.2, title = "Ana Wolf Semijoias e Pratas" }: LogoProps) {
   return (
     <svg
       viewBox="0 0 200 220"

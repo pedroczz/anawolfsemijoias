@@ -9,7 +9,7 @@ export default function HomePage() {
       <section className="bg-vinho-gradient px-4 py-16 text-center text-creme">
         <div className="mx-auto flex max-w-3xl flex-col items-center gap-4">
           <Logo className="h-16 w-16 text-areia" />
-          <h1 className="font-display text-3xl sm:text-4xl">Ana Wolf Semijoias</h1>
+          <h1 className="font-display text-3xl sm:text-4xl">Ana Wolf Semijoias e Pratas</h1>
           <p className="max-w-xl text-creme/85">
             Semijoias com brilho de verdade, para o seu dia a dia. Peças folheadas, atemporais e
             feitas para durar.

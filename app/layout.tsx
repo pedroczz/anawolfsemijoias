@@ -21,23 +21,23 @@ const siteUrl = "https://anawolfsemijoias.vercel.app";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "Ana Wolf Semijoias",
+  title: "Ana Wolf Semijoias e Pratas",
   description: "Semijoias com brilho de verdade, para o seu dia a dia.",
   icons: {
     icon: "/icon.svg",
   },
   openGraph: {
-    title: "Ana Wolf Semijoias",
+    title: "Ana Wolf Semijoias e Pratas",
     description: "Semijoias com brilho de verdade, para o seu dia a dia.",
     url: siteUrl,
-    siteName: "Ana Wolf Semijoias",
+    siteName: "Ana Wolf Semijoias e Pratas",
     images: [{ url: "/og.png", width: 1200, height: 630 }],
     locale: "pt_BR",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Ana Wolf Semijoias",
+    title: "Ana Wolf Semijoias e Pratas",
     description: "Semijoias com brilho de verdade, para o seu dia a dia.",
     images: ["/og.png"],
   },

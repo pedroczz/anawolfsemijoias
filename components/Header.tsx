@@ -10,13 +10,15 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-40 bg-vinho text-creme shadow-md">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-        <Link href="/" className="flex items-center gap-2">
-          <Logo className="h-9 w-9 text-areia" />
-          <span className="font-display text-lg tracking-wide">Ana Wolf Semijoias</span>
+        <Link href="/" className="flex min-w-0 items-center gap-2">
+          <Logo className="h-9 w-9 shrink-0 text-areia" />
+          <span className="truncate font-display text-sm tracking-wide sm:text-lg">
+            Ana Wolf Semijoias e Pratas
+          </span>
         </Link>
         <Link
           href="/carrinho"
-          className="relative rounded-full border border-areia/60 px-4 py-2 text-sm font-medium text-creme transition hover:bg-areia hover:text-vinho"
+          className="relative shrink-0 rounded-full border border-areia/60 px-4 py-2 text-sm font-medium text-creme transition hover:bg-areia hover:text-vinho"
         >
           Carrinho
           {count > 0 && (

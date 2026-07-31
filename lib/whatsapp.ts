@@ -20,7 +20,7 @@ export function buildOrderMessage(items: CartItem[]): string {
   }, 0);
 
   const message = [
-    "Olá! Gostaria de fazer o seguinte pedido na Ana Wolf Semijoias:",
+    "Olá! Gostaria de fazer o seguinte pedido na Ana Wolf Semijoias e Pratas:",
     "",
     ...lines,
     "",
