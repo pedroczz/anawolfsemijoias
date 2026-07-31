@@ -251,6 +251,19 @@ export function parseProductsCsv(csvText: string): Product[] {
 }
 
 /**
+ * O Excel (principalmente em pt-BR) frequentemente publica CSV em Windows-1252,
+ * não UTF-8 — o que corrompe acentos ("Descrição" -> "Descri��o"). Tenta UTF-8
+ * primeiro (estrito) e cai para Windows-1252 se os bytes não forem UTF-8 válido.
+ */
+function decodeCsvBuffer(buffer: ArrayBuffer): string {
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(buffer);
+  } catch {
+    return new TextDecoder("windows-1252").decode(buffer);
+  }
+}
+
+/**
  * Busca o catálogo publicado do Excel Online. Server-only: usa a env var
  * PRODUCTS_SHEET_CSV_URL (link "Publicar na Web" em formato CSV) e nunca
  * usa cache, para refletir alterações da planilha imediatamente.
@@ -267,7 +280,7 @@ export async function getProducts(): Promise<Product[]> {
     if (!response.ok) {
       throw new Error(`Falha ao buscar planilha: HTTP ${response.status}`);
     }
-    const csvText = await response.text();
+    const csvText = decodeCsvBuffer(await response.arrayBuffer());
     const products = parseProductsCsv(csvText);
     return products.length > 0 ? products : FALLBACK_PRODUCTS;
   } catch (error) {
