@@ -7,7 +7,7 @@ const POLL_INTERVAL_MS = 20_000;
 
 type ProductsContextValue = {
   products: Product[];
-  getProduct: (id: string) => Product | undefined;
+  getProduct: (sku: string) => Product | undefined;
 };
 
 const ProductsContext = createContext<ProductsContextValue | null>(null);
@@ -45,7 +45,7 @@ export function ProductsProvider({
 
   const value: ProductsContextValue = {
     products,
-    getProduct: (id: string) => products.find((product) => product.id === id),
+    getProduct: (sku: string) => products.find((product) => product.sku === sku),
   };
 
   return <ProductsContext.Provider value={value}>{children}</ProductsContext.Provider>;

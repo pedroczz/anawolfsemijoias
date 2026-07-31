@@ -1,13 +1,23 @@
+import { existsSync } from "fs";
+import path from "path";
 import Papa from "papaparse";
 
 export type Product = {
-  id: string;
+  sku: string;
   name: string;
   category: string;
-  price: number;
-  available: boolean;
+  material: string;
+  color: string;
+  size: string;
   description: string;
-  image: string;
+  price: number;
+  stock: number;
+  images: string[];
+  featured: boolean;
+  isNew: boolean;
+  order: number;
+  /** Derivado de stock > 0 — é o que os componentes existentes checam. */
+  available: boolean;
 };
 
 /**
@@ -16,60 +26,94 @@ export type Product = {
  */
 const FALLBACK_PRODUCTS: Product[] = [
   {
-    id: "1",
+    sku: "1",
     name: "Colar Gota Dourada",
     category: "colar",
-    price: 89.9,
-    available: true,
+    material: "folheado a ouro",
+    color: "dourado",
+    size: "único",
     description: "Colar folheado a ouro com pingente em gota, corrente fina.",
-    image: "/products/placeholder.svg",
+    price: 89.9,
+    stock: 3,
+    images: ["placeholder.svg"],
+    featured: true,
+    isNew: false,
+    order: 1,
+    available: true,
   },
   {
-    id: "2",
+    sku: "2",
     name: "Brinco Argola Vinho",
     category: "brinco",
-    price: 54.9,
-    available: true,
+    material: "folheado a ouro",
+    color: "dourado",
+    size: "médio",
     description: "Argola média com banho dourado e detalhe esmaltado.",
-    image: "/products/placeholder.svg",
+    price: 54.9,
+    stock: 0,
+    images: ["placeholder.svg"],
+    featured: false,
+    isNew: false,
+    order: 2,
+    available: false,
   },
   {
-    id: "3",
+    sku: "3",
     name: "Anel Solitário Areia",
     category: "anel",
-    price: 69.9,
-    available: false,
+    material: "folheado a ouro",
+    color: "dourado",
+    size: "16",
     description: "Anel solitário com zircônia e acabamento fosco dourado.",
-    image: "/products/placeholder.svg",
+    price: 69.9,
+    stock: 5,
+    images: ["placeholder.svg"],
+    featured: false,
+    isNew: true,
+    order: 3,
+    available: true,
   },
 ];
 
+const PRODUCT_IMAGES_DIR = path.join(process.cwd(), "public", "produtos");
+
 // Mapeia variações de cabeçalho (com/sem acento, maiúsculas) para a chave canônica.
 const HEADER_ALIASES: Record<string, string> = {
-  "codigo": "codigo",
-  "código": "codigo",
-  "sku": "codigo",
-  "nome": "nome",
-  "categoria": "categoria",
-  "preco": "preco",
-  "preço": "preco",
-  "disponibilidade": "disponibilidade",
-  "status": "disponibilidade",
-  "descricao": "descricao",
-  "descrição": "descricao",
-  "foto": "foto",
-  "imagem": "foto",
+  sku: "sku",
+  codigo: "sku",
+  código: "sku",
+  nome: "nome",
+  categoria: "categoria",
+  material: "material",
+  cor: "cor",
+  tamanho: "tamanho",
+  descricao: "descricao",
+  descrição: "descricao",
+  preco: "preco",
+  preço: "preco",
+  estoque: "estoque",
+  imagemprincipal: "imagemprincipal",
+  imagem1: "imagemprincipal",
+  imagem2: "imagem2",
+  imagem3: "imagem3",
+  imagem4: "imagem4",
+  destaque: "destaque",
+  novo: "novo",
+  ativo: "ativo",
+  ordem: "ordem",
 };
 
-const REQUIRED_COLUMNS = ["codigo", "nome", "categoria", "preco", "disponibilidade"];
+const REQUIRED_COLUMNS = ["sku", "nome", "categoria", "preco", "estoque"];
 
 function normalizeHeader(header: string): string {
   const key = header.trim().toLowerCase();
   return HEADER_ALIASES[key] ?? key;
 }
 
-function parsePrice(raw: string): number {
+function parsePrice(raw: string): number | null {
   const cleaned = (raw ?? "").trim().replace(/[^\d,.-]/g, "");
+  if (cleaned === "") return null;
+
   const lastComma = cleaned.lastIndexOf(",");
   const lastDot = cleaned.lastIndexOf(".");
 
@@ -81,13 +125,34 @@ function parsePrice(raw: string): number {
   }
 
   const value = parseFloat(normalized);
-  return Number.isFinite(value) ? value : 0;
+  return Number.isFinite(value) && value > 0 ? value : null;
 }
 
-function parseAvailability(raw: string): boolean {
-  return !(raw ?? "").trim().toLowerCase().startsWith("esgot");
+function parseStock(raw: string): number | null {
+  const cleaned = (raw ?? "").trim().replace(",", ".");
+  if (cleaned === "") return null;
+  const value = Number(cleaned);
+  return Number.isFinite(value) && Number.isInteger(value) && value >= 0 ? value : null;
 }
 
+function parseBooleanFlag(raw: string, defaultValue: boolean): boolean {
+  const value = (raw ?? "").trim().toLowerCase();
+  if (value === "") return defaultValue;
+  if (["true", "verdadeiro", "sim", "1", "yes"].includes(value)) return true;
+  if (["false", "falso", "nao", "não", "0", "no"].includes(value)) return false;
+  return defaultValue;
+}
+
+function parseOrder(raw: string): number {
+  const value = parseInt((raw ?? "").trim(), 10);
+  return Number.isFinite(value) ? value : 9999;
+}
+
+function imageExists(filename: string): boolean {
+  return existsSync(path.join(PRODUCT_IMAGES_DIR, filename));
+}
+
+/** Recebe o CSV publicado pelo Excel Online e devolve produtos válidos, descartando e logando o resto. */
 export function parseProductsCsv(csvText: string): Product[] {
   const parsed = Papa.parse<Record<string, string>>(csvText, {
     header: true,
@@ -104,17 +169,85 @@ export function parseProductsCsv(csvText: string): Product[] {
     throw new Error(`Colunas obrigatórias ausentes na planilha: ${missing.join(", ")}`);
   }
 
-  return rows
-    .filter((row) => (row["codigo"] ?? "").trim() !== "" && (row["nome"] ?? "").trim() !== "")
-    .map((row) => ({
-      id: row["codigo"].trim(),
-      name: row["nome"].trim(),
-      category: (row["categoria"] ?? "").trim().toLowerCase(),
-      price: parsePrice(row["preco"]),
-      available: parseAvailability(row["disponibilidade"]),
+  const seenSkus = new Set<string>();
+  const products: Product[] = [];
+
+  rows.forEach((row, index) => {
+    const rowNumber = index + 2; // +1 pelo cabeçalho, +1 por índice base 1
+    const sku = (row["sku"] ?? "").trim();
+    const name = (row["nome"] ?? "").trim();
+    const category = (row["categoria"] ?? "").trim();
+
+    if (sku === "") return; // linha em branco / sem produto
+    if (seenSkus.has(sku)) {
+      console.warn(`Planilha: SKU duplicado "${sku}" na linha ${rowNumber} — ignorado.`);
+      return;
+    }
+    if (name === "") {
+      console.warn(`Planilha: nome vazio para o SKU "${sku}" (linha ${rowNumber}) — ignorado.`);
+      return;
+    }
+    if (category === "") {
+      console.warn(`Planilha: categoria vazia para o SKU "${sku}" (linha ${rowNumber}) — ignorado.`);
+      return;
+    }
+
+    const price = parsePrice(row["preco"]);
+    if (price === null) {
+      console.warn(`Planilha: preço inválido para o SKU "${sku}" (linha ${rowNumber}) — ignorado.`);
+      return;
+    }
+
+    const stock = parseStock(row["estoque"]);
+    if (stock === null) {
+      console.warn(`Planilha: estoque inválido para o SKU "${sku}" (linha ${rowNumber}) — ignorado.`);
+      return;
+    }
+
+    const mainImage = (row["imagemprincipal"] ?? "").trim();
+    if (mainImage !== "" && !imageExists(mainImage)) {
+      console.warn(
+        `Planilha: imagem principal "${mainImage}" do SKU "${sku}" (linha ${rowNumber}) não existe em public/produtos — ignorado.`
+      );
+      return;
+    }
+
+    const extraImages = [row["imagem2"], row["imagem3"], row["imagem4"]]
+      .map((value) => (value ?? "").trim())
+      .filter((value) => {
+        if (value === "") return false;
+        if (!imageExists(value)) {
+          console.warn(`Planilha: imagem "${value}" do SKU "${sku}" (linha ${rowNumber}) não existe — ignorada.`);
+          return false;
+        }
+        return true;
+      });
+
+    const images = [mainImage, ...extraImages].filter((value) => value !== "");
+
+    const active = parseBooleanFlag(row["ativo"], true);
+    if (!active) return; // Ativo=false: existe na planilha, mas não entra no catálogo público.
+
+    seenSkus.add(sku);
+    products.push({
+      sku,
+      name,
+      category: category.toLowerCase(),
+      material: (row["material"] ?? "").trim(),
+      color: (row["cor"] ?? "").trim(),
+      size: (row["tamanho"] ?? "").trim(),
       description: (row["descricao"] ?? "").trim(),
-      image: (row["foto"] ?? "").trim() || "/products/placeholder.svg",
-    }));
+      price,
+      stock,
+      images: images.length > 0 ? images : ["placeholder.svg"],
+      featured: parseBooleanFlag(row["destaque"], false),
+      isNew: parseBooleanFlag(row["novo"], false),
+      order: parseOrder(row["ordem"]),
+      available: stock > 0,
+    });
+  });
+
+  return products.sort((a, b) => a.order - b.order);
 }
 
 /**

@@ -39,7 +39,7 @@ export default function CartPage() {
       <ul className="mt-6 flex flex-col gap-4">
         {lines.map((product) => (
           <li
-            key={product.id}
+            key={product.sku}
             className="flex items-center justify-between gap-4 rounded-lg border border-rosa/40 bg-off-white p-4"
           >
             <div>
@@ -54,7 +54,7 @@ export default function CartPage() {
               <p className="font-semibold text-bordo">{currency.format(product.price)}</p>
               <button
                 type="button"
-                onClick={() => removeItem(product.id)}
+                onClick={() => removeItem(product.sku)}
                 className="text-sm text-terracota underline-offset-2 hover:underline"
               >
                 Remover
