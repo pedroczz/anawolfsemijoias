@@ -2,12 +2,21 @@
 
 import Link from "next/link";
 import { useCart } from "@/lib/cart-context";
+import { useProducts } from "@/lib/products-context";
 import { buildOrderWhatsAppUrl } from "@/lib/whatsapp";
 
 const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function CartPage() {
-  const { items, lines, total, updateQuantity, removeItem } = useCart();
+  const { items, removeItem, clearCart } = useCart();
+  const { getProduct } = useProducts();
+
+  const lines = items
+    .map((id) => getProduct(id))
+    .filter((product): product is NonNullable<typeof product> => product !== undefined);
+
+  const availableLines = lines.filter((product) => product.available);
+  const total = availableLines.reduce((sum, product) => sum + product.price, 0);
 
   if (lines.length === 0) {
     return (
@@ -28,25 +37,21 @@ export default function CartPage() {
     <section className="mx-auto max-w-2xl px-4 py-12">
       <h1 className="font-display text-2xl text-vinho">Seu carrinho</h1>
       <ul className="mt-6 flex flex-col gap-4">
-        {lines.map(({ product, quantity, subtotal }) => (
+        {lines.map((product) => (
           <li
             key={product.id}
             className="flex items-center justify-between gap-4 rounded-lg border border-rosa/40 bg-off-white p-4"
           >
             <div>
               <p className="font-medium text-vinho">{product.name}</p>
-              <p className="text-sm text-vinho/70">{currency.format(product.price)} cada</p>
+              {!product.available && (
+                <span className="mt-1 inline-block rounded-full bg-vinho px-2 py-0.5 text-xs font-semibold text-creme">
+                  Esgotado — não incluído no total
+                </span>
+              )}
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min={1}
-                value={quantity}
-                onChange={(event) => updateQuantity(product.id, Number(event.target.value))}
-                className="w-16 rounded border border-rosa/50 px-2 py-1 text-center text-vinho"
-                aria-label={`Quantidade de ${product.name}`}
-              />
-              <p className="w-24 text-right font-semibold text-bordo">{currency.format(subtotal)}</p>
+            <div className="flex items-center gap-3">
+              <p className="font-semibold text-bordo">{currency.format(product.price)}</p>
               <button
                 type="button"
                 onClick={() => removeItem(product.id)}
@@ -65,9 +70,10 @@ export default function CartPage() {
       </div>
 
       <a
-        href={buildOrderWhatsAppUrl(items)}
+        href={buildOrderWhatsAppUrl(availableLines)}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => clearCart()}
         className="mt-6 block rounded-full bg-vinho px-6 py-3 text-center text-sm font-semibold text-creme transition hover:bg-bordo"
       >
         Finalizar pedido pelo WhatsApp

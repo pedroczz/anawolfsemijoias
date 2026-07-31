@@ -1,9 +1,13 @@
+"use client";
+
 import Logo from "@/components/ui/Logo";
 import PatternBackground from "@/components/ui/PatternBackground";
 import ProductCard from "@/components/ProductCard";
-import { products } from "@/lib/products";
+import { useProducts } from "@/lib/products-context";
 
 export default function HomePage() {
+  const { products } = useProducts();
+
   return (
     <>
       <section className="bg-vinho-gradient px-4 py-16 text-center text-creme">
@@ -30,15 +34,18 @@ export default function HomePage() {
           <div className="mb-8 text-center">
             <h2 className="font-display text-2xl text-vinho">Coleção em destaque</h2>
             <p className="mt-2 text-sm text-vinho/70">
-              Protótipo do site — catálogo reduzido para demonstração. As peças reais serão
-              cadastradas em breve.
+              Peças únicas — disponibilidade e preços atualizados em tempo real.
             </p>
           </div>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          {products.length === 0 ? (
+            <p className="text-center text-vinho/60">Nenhum produto cadastrado no momento.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {products.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </>

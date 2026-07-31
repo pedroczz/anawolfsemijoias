@@ -1,29 +1,21 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { products, type Product } from "@/lib/products";
-
-export type CartItem = {
-  productId: string;
-  quantity: number;
-};
-
-type CartContextValue = {
-  items: CartItem[];
-  addItem: (productId: string) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
-  clearCart: () => void;
-  lines: { product: Product; quantity: number; subtotal: number }[];
-  total: number;
-  count: number;
-};
 
 const CartContext = createContext<CartContextValue | null>(null);
 const STORAGE_KEY = "ana-wolf-cart";
 
+type CartContextValue = {
+  items: string[];
+  addItem: (productId: string) => void;
+  removeItem: (productId: string) => void;
+  clearCart: () => void;
+  has: (productId: string) => boolean;
+  count: number;
+};
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -43,58 +35,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items, hydrated]);
 
+  // Peças únicas: no máximo 1 unidade por produto no carrinho.
   const addItem = useCallback((productId: string) => {
-    setItems((current) => {
-      const existing = current.find((item) => item.productId === productId);
-      if (existing) {
-        return current.map((item) =>
-          item.productId === productId ? { ...item, quantity: item.quantity + 1 } : item
-        );
-      }
-      return [...current, { productId, quantity: 1 }];
-    });
+    setItems((current) => (current.includes(productId) ? current : [...current, productId]));
   }, []);
 
   const removeItem = useCallback((productId: string) => {
-    setItems((current) => current.filter((item) => item.productId !== productId));
-  }, []);
-
-  const updateQuantity = useCallback((productId: string, quantity: number) => {
-    setItems((current) => {
-      if (quantity <= 0) {
-        return current.filter((item) => item.productId !== productId);
-      }
-      return current.map((item) => (item.productId === productId ? { ...item, quantity } : item));
-    });
+    setItems((current) => current.filter((id) => id !== productId));
   }, []);
 
   const clearCart = useCallback(() => setItems([]), []);
 
-  const lines = useMemo(
-    () =>
-      items
-        .map((item) => {
-          const product = products.find((p) => p.id === item.productId);
-          if (!product) return null;
-          return { product, quantity: item.quantity, subtotal: product.price * item.quantity };
-        })
-        .filter((line): line is { product: Product; quantity: number; subtotal: number } => line !== null),
-    [items]
-  );
+  const has = useCallback((productId: string) => items.includes(productId), [items]);
 
-  const total = useMemo(() => lines.reduce((sum, line) => sum + line.subtotal, 0), [lines]);
-  const count = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
+  const count = useMemo(() => items.length, [items]);
 
-  const value: CartContextValue = {
-    items,
-    addItem,
-    removeItem,
-    updateQuantity,
-    clearCart,
-    lines,
-    total,
-    count,
-  };
+  const value: CartContextValue = { items, addItem, removeItem, clearCart, has, count };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

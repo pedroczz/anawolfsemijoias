@@ -7,12 +7,18 @@ import { useCart } from "@/lib/cart-context";
 const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function ProductCard({ product }: { product: Product }) {
-  const { addItem } = useCart();
+  const { addItem, has } = useCart();
+  const inCart = has(product.id);
 
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border border-rosa/40 bg-off-white shadow-sm transition hover:shadow-md">
       <div className="relative aspect-square w-full bg-off-white">
         <Image src={product.image} alt={product.name} fill className="object-cover" />
+        {!product.available && (
+          <span className="absolute left-3 top-3 rounded-full bg-vinho px-3 py-1 text-xs font-semibold text-creme">
+            Esgotado
+          </span>
+        )}
       </div>
       <div className="flex flex-1 flex-col gap-2 p-4">
         <h3 className="font-display text-base text-vinho">{product.name}</h3>
@@ -20,10 +26,11 @@ export default function ProductCard({ product }: { product: Product }) {
         <p className="font-semibold text-bordo">{currency.format(product.price)}</p>
         <button
           type="button"
+          disabled={!product.available || inCart}
           onClick={() => addItem(product.id)}
-          className="mt-2 rounded-full bg-vinho px-4 py-2 text-sm font-medium text-creme transition hover:bg-bordo"
+          className="mt-2 rounded-full bg-vinho px-4 py-2 text-sm font-medium text-creme transition hover:bg-bordo disabled:cursor-not-allowed disabled:bg-vinho/30 disabled:text-creme/70 disabled:hover:bg-vinho/30"
         >
-          Adicionar ao carrinho
+          {!product.available ? "Esgotado" : inCart ? "Já no carrinho" : "Adicionar ao carrinho"}
         </button>
       </div>
     </div>

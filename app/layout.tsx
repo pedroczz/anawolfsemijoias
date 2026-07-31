@@ -4,6 +4,12 @@ import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { CartProvider } from "@/lib/cart-context";
+import { ProductsProvider } from "@/lib/products-context";
+import { getProducts } from "@/lib/products";
+
+// Garante busca fresca do catálogo a cada request, independente de inferência
+// automática do Next a partir do fetch (que não roda quando o fallback é usado).
+export const dynamic = "force-dynamic";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -43,15 +49,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const initialProducts = await getProducts();
+
   return (
     <html lang="pt-BR" className={`${playfair.variable} ${inter.variable}`}>
       <body className="font-sans">
-        <CartProvider>
-          <Header />
-          <main>{children}</main>
-          <Footer />
-        </CartProvider>
+        <ProductsProvider initialProducts={initialProducts}>
+          <CartProvider>
+            <Header />
+            <main>{children}</main>
+            <Footer />
+          </CartProvider>
+        </ProductsProvider>
       </body>
     </html>
   );
