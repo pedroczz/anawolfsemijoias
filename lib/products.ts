@@ -204,12 +204,14 @@ export function parseProductsCsv(csvText: string): Product[] {
       return;
     }
 
-    const mainImage = (row["imagemprincipal"] ?? "").trim();
+    // Imagem referenciada mas ainda não enviada ao projeto: não derruba o produto,
+    // só usa a imagem provisória até a foto real ser adicionada em public/produtos/.
+    let mainImage = (row["imagemprincipal"] ?? "").trim();
     if (mainImage !== "" && !imageExists(mainImage)) {
       console.warn(
-        `Planilha: imagem principal "${mainImage}" do SKU "${sku}" (linha ${rowNumber}) não existe em public/produtos — ignorado.`
+        `Planilha: imagem principal "${mainImage}" do SKU "${sku}" (linha ${rowNumber}) ainda não existe em public/produtos — produto exibido com imagem provisória até a foto ser adicionada.`
       );
-      return;
+      mainImage = "";
     }
 
     const extraImages = [row["imagem2"], row["imagem3"], row["imagem4"]]
@@ -217,7 +219,9 @@ export function parseProductsCsv(csvText: string): Product[] {
       .filter((value) => {
         if (value === "") return false;
         if (!imageExists(value)) {
-          console.warn(`Planilha: imagem "${value}" do SKU "${sku}" (linha ${rowNumber}) não existe — ignorada.`);
+          console.warn(
+            `Planilha: imagem "${value}" do SKU "${sku}" (linha ${rowNumber}) ainda não existe — ignorada por enquanto.`
+          );
           return false;
         }
         return true;

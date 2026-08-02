@@ -26,10 +26,11 @@ não importa de verdade — o que importa é o nome de cada cabeçalho):
   mas continua listado). Qualquer valor negativo ou não numérico é tratado como erro
   e o produto é ignorado.
 - **ImagemPrincipal / Imagem2 / Imagem3 / Imagem4**: coloque **apenas o nome do
-  arquivo** (ex: `colar-gota.jpg`), nunca um link. O arquivo precisa existir dentro de
-  `public/produtos/` no repositório (veja o passo 4). Se `ImagemPrincipal` estiver
-  vazia ou apontar pra um arquivo que não existe, o produto inteiro é ignorado — as
-  outras 3 imagens são opcionais, e se alguma faltar, só ela é ignorada.
+  arquivo** (ex: `colar-gota.jpg`), nunca um link. Pode preencher o nome antes mesmo
+  de a foto existir no projeto — se o arquivo ainda não estiver em `public/produtos/`
+  (veja o passo 4), o produto aparece normalmente com uma imagem de espaço reservado
+  no lugar, e assume a foto real automaticamente assim que ela for adicionada ao
+  repositório, sem precisar editar a planilha de novo.
 - **Destaque / Novo / Ativo**: escreva `true`/`false` (ou `sim`/`não`). `Ativo=false`
   esconde o produto do site sem apagar a linha. Se deixar `Ativo` em branco, o produto
   aparece normalmente.
