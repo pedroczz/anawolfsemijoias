@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Logo from "@/components/ui/Logo";
@@ -9,17 +10,23 @@ import { useSettings } from "@/lib/settings-context";
 export default function Header() {
   const { count } = useCart();
   const settings = useSettings();
+  const [logoErrored, setLogoErrored] = useState(false);
+
+  useEffect(() => {
+    setLogoErrored(false);
+  }, [settings.logoUrl]);
 
   return (
     <header className="sticky top-0 z-40 bg-vinho text-creme shadow-md">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
         <Link href="/" className="flex min-w-0 items-center gap-2">
-          {settings.logoUrl ? (
+          {settings.logoUrl && !logoErrored ? (
             <Image
               src={settings.logoUrl}
               alt={settings.storeName}
               width={36}
               height={36}
+              onError={() => setLogoErrored(true)}
               className="h-9 w-9 shrink-0 rounded-full object-cover"
             />
           ) : (

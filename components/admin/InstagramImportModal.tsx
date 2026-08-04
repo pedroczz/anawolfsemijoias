@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import ImageWithFallback from "@/components/ui/ImageWithFallback";
 import { importFromInstagramAction } from "@/app/admin/(dashboard)/produtos/import-actions";
 import type { ProductDraft } from "@/services/import/types";
 import type { Category } from "@/services/categories.service";
@@ -93,7 +93,7 @@ export default function InstagramImportModal({
 
             {draft.images[0] && (
               <div className="relative aspect-square w-32 overflow-hidden rounded-lg border border-rosa/40">
-                <Image src={draft.images[0]} alt="" fill unoptimized className="object-cover" />
+                <ImageWithFallback src={draft.images[0]} alt="" fill unoptimized className="object-cover" />
               </div>
             )}
 

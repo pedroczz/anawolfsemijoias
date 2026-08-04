@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import SingleImageUpload from "@/components/admin/SingleImageUpload";
+import UploadImage from "@/components/admin/UploadImage";
 import { updateSettingsAction } from "@/app/admin/(dashboard)/configuracoes/actions";
 import type { StoreSettings } from "@/services/settings.service";
 
@@ -91,13 +91,13 @@ export default function SettingsForm({ settings }: { settings: StoreSettings }) 
       </Field>
 
       <section className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <SingleImageUpload
+        <UploadImage
           label="Logo"
           value={form.logoUrl}
           folder="settings/logo"
           onChange={(url) => set("logoUrl", url)}
         />
-        <SingleImageUpload
+        <UploadImage
           label="Banner"
           value={form.bannerUrl}
           folder="settings/banner"

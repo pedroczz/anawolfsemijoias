@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import ImageWithFallback from "@/components/ui/ImageWithFallback";
 import { useRouter } from "next/navigation";
 import { deleteMediaFileAction } from "@/app/admin/(dashboard)/uploads/actions";
 import type { MediaFile } from "@/services/storage.service";
@@ -29,7 +29,7 @@ export default function MediaGrid({ files }: { files: MediaFile[] }) {
       {files.map((file) => (
         <div key={file.path} className="flex flex-col gap-2 rounded-lg border border-rosa/30 bg-white p-2">
           <div className="relative aspect-square overflow-hidden rounded-md bg-off-white">
-            <Image src={file.url} alt={file.name} fill unoptimized className="object-cover" />
+            <ImageWithFallback src={file.url} alt={file.name} fill unoptimized className="object-cover" />
           </div>
           <p className="truncate text-xs text-vinho/70" title={file.name}>
             {file.name}
