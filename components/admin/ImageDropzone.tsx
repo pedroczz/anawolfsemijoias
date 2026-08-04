@@ -7,7 +7,9 @@ import { MEDIA_BUCKET, extractPathFromUrl } from "@/services/storage.service";
 import { validateUploadFile, buildUploadPath, uploadFileWithProgress } from "@/services/import/upload";
 import { importImageFromUrlAction } from "@/app/admin/(dashboard)/produtos/import-actions";
 
-type ImageItem = { url: string; uploading?: boolean; progress?: number };
+// `id` estável: identificar itens por referência de objeto quebra assim que o
+// progresso do upload cria um objeto novo, e o item nunca é substituído pela URL final.
+type ImageItem = { id: string; url: string; uploading?: boolean; progress?: number };
 
 export default function ImageDropzone({
   initialImages,
@@ -18,7 +20,9 @@ export default function ImageDropzone({
   folder: string;
   onChange: (urls: string[]) => void;
 }) {
-  const [items, setItems] = useState<ImageItem[]>(initialImages.map((url) => ({ url })));
+  const [items, setItems] = useState<ImageItem[]>(
+    initialImages.map((url) => ({ id: crypto.randomUUID(), url }))
+  );
   const [error, setError] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState("");
   const [importingUrl, setImportingUrl] = useState(false);
@@ -39,19 +43,21 @@ export default function ImageDropzone({
         continue;
       }
 
-      const placeholder: ImageItem = { url: URL.createObjectURL(file), uploading: true, progress: 0 };
-      setItems((prev) => [...prev, placeholder]);
+      const uploadId = crypto.randomUUID();
+      const previewUrl = URL.createObjectURL(file);
+      setItems((prev) => [...prev, { id: uploadId, url: previewUrl, uploading: true, progress: 0 }]);
 
       const path = buildUploadPath(folder, file);
 
       try {
         await uploadFileWithProgress(supabase, path, file, (percent) => {
-          setItems((prev) => prev.map((item) => (item === placeholder ? { ...item, progress: percent } : item)));
+          setItems((prev) => prev.map((item) => (item.id === uploadId ? { ...item, progress: percent } : item)));
         });
       } catch {
         setError(`Falha ao enviar "${file.name}".`);
+        URL.revokeObjectURL(previewUrl);
         setItems((prev) => {
-          const next = prev.filter((item) => item !== placeholder);
+          const next = prev.filter((item) => item.id !== uploadId);
           emitChange(next);
           return next;
         });
@@ -59,8 +65,9 @@ export default function ImageDropzone({
       }
 
       const { data } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(path);
+      URL.revokeObjectURL(previewUrl);
       setItems((prev) => {
-        const next = prev.map((item) => (item === placeholder ? { url: data.publicUrl } : item));
+        const next = prev.map((item) => (item.id === uploadId ? { id: item.id, url: data.publicUrl } : item));
         emitChange(next);
         return next;
       });
@@ -83,7 +90,7 @@ export default function ImageDropzone({
 
     setImageUrl("");
     setItems((prev) => {
-      const next = [...prev, { url: result.url }];
+      const next = [...prev, { id: crypto.randomUUID(), url: result.url }];
       emitChange(next);
       return next;
     });
@@ -178,7 +185,7 @@ export default function ImageDropzone({
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
           {items.map((item, index) => (
             <div
-              key={item.url + index}
+              key={item.id}
               draggable={!item.uploading}
               onDragStart={() => {
                 dragIndex.current = index;
