@@ -1,97 +1,110 @@
 # Ana Wolf Semijoias e Pratas
 
-Site da loja, com catálogo alimentado por uma planilha do Excel Online.
+Site da loja com painel administrativo. Produtos, categorias, estoque e configurações da loja
+ficam no [Supabase](https://supabase.com) (Postgres + Auth + Storage) — o site público consulta o
+banco diretamente e reflete qualquer alteração feita no painel automaticamente, sem precisar de
+novo deploy.
 
-## Catálogo de produtos (Excel Online)
+## Arquitetura
 
-O site busca os produtos de uma planilha publicada na web em formato CSV. Qualquer
-alteração feita na planilha aparece no site automaticamente (a cada carregamento de
-página e a cada ~20 segundos para quem já está navegando).
+- **Next.js (App Router)** — site público + painel admin, no mesmo projeto.
+- **Supabase Postgres** — armazena produtos, categorias e configurações da loja.
+- **Supabase Storage** — armazena as imagens (produtos, logo, banner).
+- **Supabase Auth** — login do painel administrativo.
+- **Supabase Realtime** — o site público assina mudanças na tabela `products` e atualiza a
+  vitrine automaticamente quando algo muda no painel.
 
-### 1. Crie a planilha
+```
+lib/supabase/      → clientes Supabase (browser, server, middleware)
+repositories/       → acesso direto às tabelas (queries)
+services/            → regras de negócio, validação e mapeamento para os tipos usados no app
+app/admin/           → painel administrativo (protegido por middleware)
+app/(site público)   → catálogo, carrinho
+```
 
-No [Excel Online](https://www.office.com) (OneDrive), crie uma planilha com a
-primeira linha exatamente com estas colunas (nessa ordem, mas a ordem das colunas
-não importa de verdade — o que importa é o nome de cada cabeçalho):
+## 1. Crie o projeto no Supabase
 
-| SKU | Nome | Categoria | Material | Cor | Tamanho | Descrição | Preço | Estoque | ImagemPrincipal | Imagem2 | Imagem3 | Imagem4 | Destaque | Novo | Ativo | Ordem |
-|-----|------|-----------|----------|-----|---------|-----------|-------|---------|------------------|---------|---------|---------|----------|------|-------|-------|
-| COL-001 | Colar Gota Dourada | colar | Folheado a ouro | Dourado | Único | Colar com pingente... | 89,90 | 3 | colar-gota.jpg | | | | true | false | true | 1 |
+1. Crie uma conta e um projeto em [supabase.com](https://supabase.com).
+2. Em **Project Settings → API**, copie a **Project URL** e a **anon public key**.
 
-- **SKU**: identificador único do produto (não repita, não deixe em branco). É o que
-  o carrinho usa para saber qual peça é qual — evite mudar depois de publicado.
-- **Preço**: número maior que zero, com vírgula ou ponto decimal (ex: `89,90` ou
-  `89.90`).
-- **Estoque**: número inteiro, `0` ou maior. `0` = esgotado (some do botão de comprar,
-  mas continua listado). Qualquer valor negativo ou não numérico é tratado como erro
-  e o produto é ignorado.
-- **ImagemPrincipal / Imagem2 / Imagem3 / Imagem4**: coloque **apenas o nome do
-  arquivo** (ex: `colar-gota.jpg`), nunca um link. Pode preencher o nome antes mesmo
-  de a foto existir no projeto — se o arquivo ainda não estiver em `public/produtos/`
-  (veja o passo 4), o produto aparece normalmente com uma imagem de espaço reservado
-  no lugar, e assume a foto real automaticamente assim que ela for adicionada ao
-  repositório, sem precisar editar a planilha de novo.
-- **Destaque / Novo / Ativo**: escreva `true`/`false` (ou `sim`/`não`). `Ativo=false`
-  esconde o produto do site sem apagar a linha. Se deixar `Ativo` em branco, o produto
-  aparece normalmente.
-- **Ordem**: número usado para ordenar os produtos na vitrine (menor aparece primeiro).
-- Uma linha por produto. Linhas com SKU repetido, nome vazio, categoria vazia, preço
-  ou estoque inválido são ignoradas — o site nunca quebra, só não lista aquela linha.
+## 2. Rode a migração do banco
 
-### 2. Publique a planilha na web (CSV)
+1. Abra o **SQL Editor** do seu projeto Supabase.
+2. Cole o conteúdo de [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) e
+   execute.
 
-1. No Excel Online: **Arquivo → Compartilhar → Publicar na Web**.
-2. Escolha a planilha (aba) com os produtos.
-3. No tipo de arquivo, selecione **CSV**.
-4. Clique em **Publicar** e copie o link gerado.
+Isso cria:
 
-Esse link se mantém o mesmo e sempre reflete a versão mais recente da planilha —
-não precisa gerar um novo link a cada alteração.
+- as tabelas `categories`, `products`, `product_images` e `store_settings`;
+- as políticas de RLS (leitura pública dos produtos ativos, escrita restrita a usuários
+  autenticados);
+- o bucket público `media` no Storage, com política de leitura pública e escrita restrita a
+  usuários autenticados;
+- a tabela `products` habilitada no Realtime;
+- categorias iniciais: Colar, Brinco, Anel, Pulseira e Broche.
 
-### 3. Configure o link no site
+## 3. Crie o usuário administrador
 
-- **Local (desenvolvimento)**: copie `.env.local.example` para `.env.local` e cole o
-  link em `PRODUCTS_SHEET_CSV_URL`.
+O painel não tem cadastro público — você cria o(s) usuário(s) admin direto no Supabase:
+
+1. **Authentication → Users → Add user**.
+2. Preencha e-mail e senha, e marque **Auto Confirm User**.
+
+Esse e-mail/senha é o que você vai usar para entrar em `/admin/login`.
+
+## 4. Configure as variáveis de ambiente
+
+- **Local**: copie `.env.local.example` para `.env.local` e preencha com a URL e a anon key do
+  passo 1.
 - **Produção (Vercel)**: em Project Settings → Environment Variables, adicione
-  `PRODUCTS_SHEET_CSV_URL` com o mesmo link.
+  `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 
-Sem essa variável configurada, o site usa um catálogo de exemplo (fallback) para
-nunca ficar com a vitrine vazia.
-
-### 4. Adicione as fotos dos produtos
-
-As fotos **não** ficam na planilha nem em links — elas ficam versionadas junto com o
-código, na pasta `public/produtos/`. Pra adicionar uma foto nova:
-
-1. Salve o arquivo de imagem dentro de `public/produtos/` (ex: `colar-gota.jpg`).
-2. Na planilha, escreva **só o nome do arquivo** na coluna `ImagemPrincipal` (ou
-   `Imagem2`/`3`/`4`).
-3. Commite e dê push — como é um arquivo do repositório, precisa de um novo deploy
-   pra aparecer (diferente de preço/estoque/nome, que atualizam sozinhos).
-
-### 5. Publicando alterações
-
-- **Preço, estoque, nome, descrição, destaque, novo, ativo, ordem**: edite a planilha
-  no Excel Online e salve — o site reflete a mudança sozinho (a cada carregamento de
-  página e a cada ~20s para quem já está navegando). Não precisa de deploy.
-- **Fotos novas**: precisam ser adicionadas ao repositório (`public/produtos/`) e
-  publicadas com um commit + push, como qualquer mudança de código.
-
-## Carrinho
-
-Como as peças são únicas, o carrinho aceita no máximo 1 unidade por produto. Um
-produto com `Estoque = 0` não pode ser adicionado, e se um item já no carrinho ficar
-esgotado depois, ele aparece sinalizado e não entra no total.
-
-## Desenvolvimento
+## 5. Rode o projeto
 
 ```bash
 npm install
 npm run dev
 ```
 
+Acesse `http://localhost:3000` para o site e `http://localhost:3000/admin/login` para o painel.
+
 ```bash
 npm run typecheck
 npm run lint
 npm run build
 ```
+
+## Painel administrativo (`/admin`)
+
+Protegido por middleware: qualquer rota em `/admin` (exceto `/admin/login`) redireciona para o
+login se não houver sessão autenticada.
+
+- **Dashboard** — métricas gerais (produtos ativos, inativos, esgotados, em destaque).
+- **Produtos** — cadastro completo (SKU, nome, categoria, descrições, material, cor, tamanho,
+  preço e preço promocional, estoque, peso, ativo/destaque/novo, ordem de exibição, imagens),
+  busca, filtros, ordenação, paginação, duplicar e excluir.
+  - As imagens são enviadas direto para o Storage ao soltar/selecionar o arquivo (com
+    pré-visualização) e podem ser reordenadas por arrastar-e-soltar — a primeira imagem da lista é
+    sempre a imagem principal exibida no catálogo.
+  - Excluir um produto remove também suas imagens do Storage.
+- **Categorias** — criar, editar, excluir e reordenar.
+- **Estoque** — ajuste rápido da quantidade de cada produto. `Estoque = 0` aparece como
+  "Esgotado" no site; o produto continua listado, só não pode ser adicionado ao carrinho.
+  `Ativo = false` remove o produto do catálogo público (mas ele continua no painel).
+- **Configurações** — nome da loja, WhatsApp, Instagram, Facebook, endereço, mensagem padrão do
+  WhatsApp (aceita os placeholders `{{loja}}`, `{{itens}}` e `{{total}}`), logo, banner e SEO
+  (título/descrição usados no `<head>` e no compartilhamento em redes sociais).
+- **Uploads** — navega e permite excluir qualquer imagem já enviada ao Storage.
+
+## Site público
+
+Busca os produtos ativos e as configurações da loja diretamente do Supabase a cada carregamento
+de página, e assina mudanças em tempo real (Supabase Realtime) enquanto o visitante navega — uma
+alteração feita no painel aparece no site sem precisar de novo deploy ou rebuild.
+
+## Carrinho
+
+Como as peças são únicas, o carrinho aceita no máximo 1 unidade por produto (guardado no
+navegador do cliente). Um produto com `Estoque = 0` não pode ser adicionado, e se um item já no
+carrinho ficar esgotado depois, ele aparece sinalizado e não entra no total. O pedido é finalizado
+via link do WhatsApp, usando o número e a mensagem padrão configurados no painel.

@@ -3,20 +3,22 @@
 import Link from "next/link";
 import { useCart } from "@/lib/cart-context";
 import { useProducts } from "@/lib/products-context";
-import { buildOrderWhatsAppUrl } from "@/lib/whatsapp";
+import { useSettings } from "@/lib/settings-context";
+import { buildOrderWhatsAppUrl, effectivePrice } from "@/lib/whatsapp";
 
 const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function CartPage() {
   const { items, removeItem, clearCart } = useCart();
   const { getProduct } = useProducts();
+  const settings = useSettings();
 
   const lines = items
     .map((id) => getProduct(id))
     .filter((product): product is NonNullable<typeof product> => product !== undefined);
 
   const availableLines = lines.filter((product) => product.available);
-  const total = availableLines.reduce((sum, product) => sum + product.price, 0);
+  const total = availableLines.reduce((sum, product) => sum + effectivePrice(product), 0);
 
   if (lines.length === 0) {
     return (
@@ -51,7 +53,7 @@ export default function CartPage() {
               )}
             </div>
             <div className="flex items-center gap-3">
-              <p className="font-semibold text-bordo">{currency.format(product.price)}</p>
+              <p className="font-semibold text-bordo">{currency.format(effectivePrice(product))}</p>
               <button
                 type="button"
                 onClick={() => removeItem(product.sku)}
@@ -70,7 +72,7 @@ export default function CartPage() {
       </div>
 
       <a
-        href={buildOrderWhatsAppUrl(availableLines)}
+        href={buildOrderWhatsAppUrl(availableLines, settings)}
         target="_blank"
         rel="noopener noreferrer"
         onClick={() => clearCart()}

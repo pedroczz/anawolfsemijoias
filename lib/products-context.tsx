@@ -1,9 +1,9 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import type { Product } from "@/lib/products";
-
-const POLL_INTERVAL_MS = 20_000;
+import { createClient } from "@/lib/supabase/client";
+import { findAllActive } from "@/repositories/products.repository";
+import { mapProduct, type Product } from "@/services/products.mapper";
 
 type ProductsContextValue = {
   products: Product[];
@@ -24,22 +24,28 @@ export function ProductsProvider({
 
   useEffect(() => {
     isMounted.current = true;
+    const supabase = createClient();
 
     async function refresh() {
       try {
-        const response = await fetch("/api/products", { cache: "no-store" });
-        if (!response.ok) return;
-        const data: Product[] = await response.json();
-        if (isMounted.current) setProducts(data);
+        const rows = await findAllActive(supabase);
+        if (isMounted.current) setProducts(rows.map(mapProduct));
       } catch {
         // Mantém o catálogo atual se a atualização falhar (ex: rede instável).
       }
     }
 
-    const interval = setInterval(refresh, POLL_INTERVAL_MS);
+    // Atualização em tempo real: qualquer mudança em produtos ou imagens
+    // feita no painel admin reflete aqui sem precisar de novo deploy.
+    const channel = supabase
+      .channel("public-products")
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "product_images" }, refresh)
+      .subscribe();
+
     return () => {
       isMounted.current = false;
-      clearInterval(interval);
+      supabase.removeChannel(channel);
     };
   }, []);
 

@@ -3,13 +3,16 @@
 import Image from "next/image";
 import type { Product } from "@/lib/products";
 import { useCart } from "@/lib/cart-context";
+import { effectivePrice } from "@/lib/whatsapp";
 
 const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function ProductCard({ product }: { product: Product }) {
   const { addItem, has } = useCart();
   const inCart = has(product.sku);
-  const mainImage = `/produtos/${product.images[0] ?? "placeholder.svg"}`;
+  const mainImage = product.images[0] ?? "/produtos/placeholder.svg";
+  const price = effectivePrice(product);
+  const onSale = product.promoPrice !== null && product.promoPrice < product.price;
 
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border border-rosa/40 bg-off-white shadow-sm transition hover:shadow-md">
@@ -29,8 +32,11 @@ export default function ProductCard({ product }: { product: Product }) {
       </div>
       <div className="flex flex-1 flex-col gap-2 p-4">
         <h3 className="font-display text-base text-vinho">{product.name}</h3>
-        <p className="flex-1 text-sm text-vinho/70">{product.description}</p>
-        <p className="font-semibold text-bordo">{currency.format(product.price)}</p>
+        <p className="flex-1 text-sm text-vinho/70">{product.shortDescription}</p>
+        <p className="font-semibold text-bordo">
+          {onSale && <span className="mr-2 text-xs font-normal text-vinho/50 line-through">{currency.format(product.price)}</span>}
+          {currency.format(price)}
+        </p>
         <button
           type="button"
           disabled={!product.available || inCart}

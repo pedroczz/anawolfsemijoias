@@ -4,20 +4,19 @@ import Logo from "@/components/ui/Logo";
 import PatternBackground from "@/components/ui/PatternBackground";
 import ProductCard from "@/components/ProductCard";
 import { useProducts } from "@/lib/products-context";
+import { useSettings } from "@/lib/settings-context";
 
 export default function HomePage() {
   const { products } = useProducts();
+  const settings = useSettings();
 
   return (
     <>
       <section className="bg-vinho-gradient px-4 py-16 text-center text-creme">
         <div className="mx-auto flex max-w-3xl flex-col items-center gap-4">
           <Logo className="h-16 w-16 text-areia" />
-          <h1 className="font-display text-3xl sm:text-4xl">Ana Wolf Semijoias e Pratas</h1>
-          <p className="max-w-xl text-creme/85">
-            Semijoias com brilho de verdade, para o seu dia a dia. Peças folheadas, atemporais e
-            feitas para durar.
-          </p>
+          <h1 className="font-display text-3xl sm:text-4xl">{settings.storeName}</h1>
+          <p className="max-w-xl text-creme/85">{settings.seoDescription}</p>
           <a
             href="#produtos"
             className="mt-2 rounded-full bg-areia px-6 py-3 text-sm font-semibold text-vinho transition hover:bg-creme"
