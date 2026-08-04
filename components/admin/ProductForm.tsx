@@ -6,6 +6,7 @@ import ImageDropzone from "@/components/admin/ImageDropzone";
 import { saveProductAction } from "@/app/admin/(dashboard)/produtos/actions";
 import type { Product } from "@/services/products.mapper";
 import type { Category } from "@/services/categories.service";
+import type { ProductDraft } from "@/services/import/types";
 
 function toInputValue(value: number | null): string {
   return value === null ? "" : String(value);
@@ -21,23 +22,29 @@ function parseOptionalNumber(value: string): number | null {
 export default function ProductForm({
   categories,
   product,
+  draft,
+  folder: folderProp,
 }: {
   categories: Category[];
   product?: Product;
+  /** Pré-preenchimento de um importador (ex: Instagram) — só faz sentido ao criar. Sempre editável. */
+  draft?: ProductDraft;
+  /** Pasta do Storage já usada pelo importador, para reaproveitar (evita órfãos em pastas diferentes). */
+  folder?: string;
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [sku, setSku] = useState(product?.sku ?? "");
-  const [name, setName] = useState(product?.name ?? "");
-  const [categoryId, setCategoryId] = useState(product?.categoryId ?? categories[0]?.id ?? "");
-  const [shortDescription, setShortDescription] = useState(product?.shortDescription ?? "");
-  const [description, setDescription] = useState(product?.description ?? "");
+  const [name, setName] = useState(product?.name ?? draft?.name ?? "");
+  const [categoryId, setCategoryId] = useState(product?.categoryId ?? draft?.categoryId ?? categories[0]?.id ?? "");
+  const [shortDescription, setShortDescription] = useState(product?.shortDescription ?? draft?.shortDescription ?? "");
+  const [description, setDescription] = useState(product?.description ?? draft?.description ?? "");
   const [material, setMaterial] = useState(product?.material ?? "");
   const [color, setColor] = useState(product?.color ?? "");
   const [size, setSize] = useState(product?.size ?? "");
-  const [price, setPrice] = useState(toInputValue(product?.price ?? null));
+  const [price, setPrice] = useState(toInputValue(product?.price ?? draft?.price ?? null));
   const [promoPrice, setPromoPrice] = useState(toInputValue(product?.promoPrice ?? null));
   const [stock, setStock] = useState(String(product?.stock ?? 0));
   const [weight, setWeight] = useState(toInputValue(product?.weight ?? null));
@@ -45,9 +52,9 @@ export default function ProductForm({
   const [featured, setFeatured] = useState(product?.featured ?? false);
   const [isNew, setIsNew] = useState(product?.isNew ?? false);
   const [order, setOrder] = useState(String(product?.order ?? 0));
-  const [images, setImages] = useState<string[]>(product?.images ?? []);
+  const [images, setImages] = useState<string[]>(product?.images ?? draft?.images ?? []);
 
-  const folderRef = useRef(`products/${product?.id ?? crypto.randomUUID()}`);
+  const folderRef = useRef(folderProp ?? `products/${product?.id ?? crypto.randomUUID()}`);
   const folder = folderRef.current;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -86,6 +93,17 @@ export default function ProductForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+      {draft && draft.warnings.length > 0 && (
+        <div className="rounded-lg bg-areia/30 p-3 text-xs text-vinho/80">
+          <p className="mb-1 font-medium">Importado do Instagram — confira antes de salvar:</p>
+          <ul className="flex flex-col gap-0.5">
+            {draft.warnings.map((warning) => (
+              <li key={warning}>• {warning}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="SKU" htmlFor="sku">
           <input
