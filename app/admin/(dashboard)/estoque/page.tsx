@@ -1,4 +1,4 @@
-import Image from "next/image";
+import ImageWithFallback from "@/components/ui/ImageWithFallback";
 import { createClient } from "@/lib/supabase/server";
 import { adminListProducts } from "@/services/products.service";
 import StockRow from "@/components/admin/StockRow";
@@ -41,9 +41,7 @@ export default async function AdminStockPage() {
               <tr key={product.id} className="border-b border-rosa/15 last:border-0">
                 <td className="flex items-center gap-3 px-4 py-3">
                   <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-off-white">
-                    {product.images[0] && (
-                      <Image src={product.images[0]} alt="" fill className="object-cover" unoptimized />
-                    )}
+                    <ImageWithFallback src={product.images[0]} alt="" fill className="object-cover" unoptimized />
                   </div>
                   <span className="font-medium text-vinho">{product.name}</span>
                 </td>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Image from "next/image";
+import ImageWithFallback from "@/components/ui/ImageWithFallback";
 import { createClient } from "@/lib/supabase/client";
 import { MEDIA_BUCKET, extractPathFromUrl } from "@/services/storage.service";
 import { validateUploadFile, buildUploadPath, uploadFileWithProgress } from "@/services/import/upload";
@@ -120,6 +120,18 @@ export default function ImageDropzone({
     });
   }
 
+  function handleSetMain(index: number) {
+    if (index === 0) return;
+
+    setItems((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(index, 1);
+      next.unshift(moved);
+      emitChange(next);
+      return next;
+    });
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <label
@@ -175,7 +187,7 @@ export default function ImageDropzone({
               onDrop={(event) => handleDrop(event, index)}
               className="relative aspect-square overflow-hidden rounded-lg border border-rosa/40 bg-white"
             >
-              <Image src={item.url} alt="" fill unoptimized className="object-cover" />
+              <ImageWithFallback src={item.url} alt="" fill unoptimized className="object-cover" />
               {index === 0 && (
                 <span className="absolute left-1 top-1 rounded bg-vinho px-1.5 py-0.5 text-[10px] font-semibold text-creme">
                   Principal
@@ -190,6 +202,17 @@ export default function ImageDropzone({
                     />
                   </div>
                   <span className="text-[10px] text-vinho">{item.progress ?? 0}%</span>
+                </div>
+              )}
+              {!item.uploading && index !== 0 && (
+                <div className="absolute inset-x-0 bottom-0 bg-vinho/70 px-1.5 py-1">
+                  <button
+                    type="button"
+                    onClick={() => handleSetMain(index)}
+                    className="text-[10px] font-medium text-creme underline-offset-2 hover:underline"
+                  >
+                    Tornar principal
+                  </button>
                 </div>
               )}
               <button

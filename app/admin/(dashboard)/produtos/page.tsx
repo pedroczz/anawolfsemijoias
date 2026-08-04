@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import ImageWithFallback from "@/components/ui/ImageWithFallback";
 import { createClient } from "@/lib/supabase/server";
 import { adminListProducts } from "@/services/products.service";
 import { listCategories } from "@/services/categories.service";
@@ -99,9 +99,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
               <tr key={product.id} className="border-b border-rosa/15 last:border-0">
                 <td className="flex items-center gap-3 px-4 py-3">
                   <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-off-white">
-                    {product.images[0] && (
-                      <Image src={product.images[0]} alt="" fill className="object-cover" unoptimized />
-                    )}
+                    <ImageWithFallback src={product.images[0]} alt="" fill className="object-cover" unoptimized />
                   </div>
                   <Link href={`/admin/produtos/${product.id}`} className="font-medium text-vinho hover:underline">
                     {product.name}
