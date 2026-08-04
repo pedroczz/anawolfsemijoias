@@ -1,0 +1,164 @@
+From 2ea03ea42b903ee00ae90bf2cf62ac52b8f8b1d1 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 4 Aug 2026 12:15:06 +0000
+Subject: [PATCH] =?UTF-8?q?Evita=20que=20o=20site=20inteiro=20derrube=20po?=
+ =?UTF-8?q?r=20falha=20de=20conex=C3=A3o=20com=20o=20Supabase?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+O layout raiz (app/layout.tsx) busca produtos e configurações do
+Supabase em toda requisição, sem tratamento de erro — se as variáveis
+de ambiente estiverem ausentes/erradas na Vercel (ou o schema não
+tiver sido migrado no projeto certo), a chamada lança exceção e
+derruba TODAS as páginas do site com "Application error: a
+server-side exception has occurred", incluindo a home.
+
+- app/layout.tsx: RootLayout e generateMetadata agora usam
+  loadInitialData(), que captura qualquer falha do Supabase e cai
+  para catálogo vazio + configurações padrão em vez de quebrar a
+  aplicação; o erro real vai para o console do servidor (Vercel →
+  Runtime Logs) para diagnóstico
+- lib/supabase/middleware.ts: mesmo tratamento no middleware que
+  protege /admin — falha "fechada" (trata como não autenticado) em
+  vez de lançar uma exceção não tratada
+- Testado localmente: subindo o servidor em produção sem as variáveis
+  NEXT_PUBLIC_SUPABASE_URL/ANON_KEY configuradas, a home volta a
+  responder 200 (antes: erro 500) com catálogo vazio e mensagem
+  "Nenhum produto cadastrado no momento"
+
+Isso não substitui configurar as variáveis de ambiente corretas na
+Vercel (Project Settings → Environment Variables) nem rodar as
+migrações do Supabase no projeto certo — só garante que o site nunca
+mais fica totalmente fora do ar por causa disso.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01J4zFqooQpQZgzr3ufGNsoL
+---
+ app/layout.tsx             | 26 +++++++++++++++----
+ lib/supabase/middleware.ts | 53 +++++++++++++++++++++-----------------
+ 2 files changed, 50 insertions(+), 29 deletions(-)
+
+diff --git a/app/layout.tsx b/app/layout.tsx
+index b84b1e1..c15cb8b 100644
+--- a/app/layout.tsx
++++ b/app/layout.tsx
+@@ -8,7 +8,8 @@ import { ProductsProvider } from "@/lib/products-context";
+ import { SettingsProvider } from "@/lib/settings-context";
+ import { getProducts } from "@/lib/products";
+ import { createClient } from "@/lib/supabase/server";
+-import { getSettings } from "@/services/settings.service";
++import { getSettings, DEFAULT_SETTINGS, type StoreSettings } from "@/services/settings.service";
++import type { Product } from "@/services/products.mapper";
+ 
+ // Garante busca fresca do catálogo e das configurações a cada request.
+ export const dynamic = "force-dynamic";
+@@ -27,9 +28,25 @@ const inter = Inter({
+ 
+ const siteUrl = "https://anawolfsemijoias.vercel.app";
+ 
++/**
++ * Busca produtos e configurações com fallback seguro: se o Supabase estiver mal
++ * configurado ou indisponível, o site continua no ar (catálogo vazio / config
++ * padrão) em vez de derrubar a aplicação inteira. O erro real fica nos logs do
++ * servidor (Vercel → Runtime Logs) para diagnóstico.
++ */
++async function loadInitialData(): Promise<{ products: Product[]; settings: StoreSettings }> {
++  try {
++    const supabase = createClient();
++    const [products, settings] = await Promise.all([getProducts(), getSettings(supabase)]);
++    return { products, settings };
++  } catch (error) {
++    console.error("Falha ao carregar dados do Supabase (produtos/configurações):", error);
++    return { products: [], settings: DEFAULT_SETTINGS };
++  }
++}
++
+ export async function generateMetadata(): Promise<Metadata> {
+-  const supabase = createClient();
+-  const settings = await getSettings(supabase);
++  const { settings } = await loadInitialData();
+   const ogImage = settings.bannerUrl ?? "/og.png";
+ 
+   return {
+@@ -58,8 +75,7 @@ export async function generateMetadata(): Promise<Metadata> {
+ }
+ 
+ export default async function RootLayout({ children }: { children: React.ReactNode }) {
+-  const supabase = createClient();
+-  const [initialProducts, initialSettings] = await Promise.all([getProducts(), getSettings(supabase)]);
++  const { products: initialProducts, settings: initialSettings } = await loadInitialData();
+ 
+   return (
+     <html lang="pt-BR" className={`${playfair.variable} ${inter.variable}`}>
+diff --git a/lib/supabase/middleware.ts b/lib/supabase/middleware.ts
+index 88bb3b1..d730cb2 100644
+--- a/lib/supabase/middleware.ts
++++ b/lib/supabase/middleware.ts
+@@ -10,34 +10,39 @@ const PUBLIC_ADMIN_PATHS = ["/admin/login"];
+  */
+ export async function updateSession(request: NextRequest) {
+   let response = NextResponse.next({ request });
+-
+-  const supabase = createServerClient<Database>(
+-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+-    {
+-      cookies: {
+-        getAll() {
+-          return request.cookies.getAll();
+-        },
+-        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+-          response = NextResponse.next({ request });
+-          cookiesToSet.forEach(({ name, value, options }) => {
+-            response.cookies.set(name, value, options);
+-          });
+-        },
+-      },
+-    }
+-  );
+-
+-  const {
+-    data: { user },
+-  } = await supabase.auth.getUser();
+-
+   const { pathname } = request.nextUrl;
+   const isAdminPath = pathname.startsWith("/admin");
+   const isPublicAdminPath = PUBLIC_ADMIN_PATHS.some((path) => pathname.startsWith(path));
+ 
++  // Se o Supabase estiver mal configurado/indisponível, falha "fechado": trata como
++  // não autenticado em vez de derrubar o middleware com uma exceção não tratada.
++  let user = null;
++  try {
++    const supabase = createServerClient<Database>(
++      process.env.NEXT_PUBLIC_SUPABASE_URL!,
++      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
++      {
++        cookies: {
++          getAll() {
++            return request.cookies.getAll();
++          },
++          setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
++            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
++            response = NextResponse.next({ request });
++            cookiesToSet.forEach(({ name, value, options }) => {
++              response.cookies.set(name, value, options);
++            });
++          },
++        },
++      }
++    );
++
++    const { data } = await supabase.auth.getUser();
++    user = data.user;
++  } catch (error) {
++    console.error("Falha ao verificar sessão do Supabase no middleware:", error);
++  }
++
+   if (isAdminPath && !isPublicAdminPath && !user) {
+     const loginUrl = new URL("/admin/login", request.url);
+     return NextResponse.redirect(loginUrl);
+-- 
+2.43.0
+
