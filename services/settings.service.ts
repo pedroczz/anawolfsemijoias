@@ -12,6 +12,8 @@ export type StoreSettings = {
   bannerUrl: string | null;
   seoTitle: string;
   seoDescription: string;
+  /** Quando true, produtos com estoque = 0 somem do catálogo público (em vez de aparecer como "Esgotado"). */
+  hideOutOfStock: boolean;
 };
 
 export const DEFAULT_SETTINGS: StoreSettings = {
@@ -26,6 +28,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   bannerUrl: null,
   seoTitle: "Ana Wolf Semijoias e Pratas",
   seoDescription: "Semijoias com brilho de verdade, para o seu dia a dia.",
+  hideOutOfStock: false,
 };
 
 function mapSettings(row: StoreSettingsRow): StoreSettings {
@@ -40,6 +43,7 @@ function mapSettings(row: StoreSettingsRow): StoreSettings {
     bannerUrl: row.banner_url,
     seoTitle: row.seo_title,
     seoDescription: row.seo_description,
+    hideOutOfStock: row.hide_out_of_stock,
   };
 }
 
@@ -60,6 +64,7 @@ export async function updateSettings(client: Client, input: StoreSettings): Prom
     banner_url: input.bannerUrl,
     seo_title: input.seoTitle.trim() || DEFAULT_SETTINGS.seoTitle,
     seo_description: input.seoDescription.trim() || DEFAULT_SETTINGS.seoDescription,
+    hide_out_of_stock: input.hideOutOfStock,
   });
   return mapSettings(row);
 }

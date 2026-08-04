@@ -47,6 +47,7 @@ export default function ProductForm({
   const [price, setPrice] = useState(toInputValue(product?.price ?? draft?.price ?? null));
   const [promoPrice, setPromoPrice] = useState(toInputValue(product?.promoPrice ?? null));
   const [stock, setStock] = useState(String(product?.stock ?? 0));
+  const [lowStockThreshold, setLowStockThreshold] = useState(String(product?.lowStockThreshold ?? 5));
   const [weight, setWeight] = useState(toInputValue(product?.weight ?? null));
   const [active, setActive] = useState(product?.active ?? true);
   const [featured, setFeatured] = useState(product?.featured ?? false);
@@ -74,6 +75,7 @@ export default function ProductForm({
       price: Number(price.replace(",", ".")) || 0,
       promoPrice: parseOptionalNumber(promoPrice),
       stock: Math.max(0, Math.trunc(Number(stock) || 0)),
+      lowStockThreshold: Math.max(0, Math.trunc(Number(lowStockThreshold) || 0)),
       weight: parseOptionalNumber(weight),
       active,
       featured,
@@ -184,7 +186,7 @@ export default function ProductForm({
         </Field>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-5">
         <Field label="Preço (R$)" htmlFor="price">
           <input
             id="price"
@@ -221,6 +223,16 @@ export default function ProductForm({
             inputMode="decimal"
             value={weight}
             onChange={(e) => setWeight(e.target.value)}
+            className="admin-input"
+          />
+        </Field>
+        <Field label="Estoque mínimo" htmlFor="lowStockThreshold">
+          <input
+            id="lowStockThreshold"
+            type="number"
+            min={0}
+            value={lowStockThreshold}
+            onChange={(e) => setLowStockThreshold(e.target.value)}
             className="admin-input"
           />
         </Field>

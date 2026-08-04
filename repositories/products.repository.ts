@@ -16,11 +16,20 @@ export type ProductWithRelations = ProductRow & {
 const SELECT_WITH_RELATIONS =
   "*, category:categories(id, name, slug), product_images(id, url, display_order)";
 
-export async function findAllActive(client: Client): Promise<ProductWithRelations[]> {
-  const { data, error } = await client
+export async function findAllActive(
+  client: Client,
+  filters: { hideOutOfStock?: boolean } = {}
+): Promise<ProductWithRelations[]> {
+  let query = client
     .from("products")
     .select(SELECT_WITH_RELATIONS)
-    .eq("active", true)
+    .eq("active", true);
+
+  if (filters.hideOutOfStock) {
+    query = query.gt("stock", 0);
+  }
+
+  const { data, error } = await query
     .order("display_order", { ascending: true })
     .order("display_order", { ascending: true, foreignTable: "product_images" });
 
@@ -153,14 +162,20 @@ export async function countAll(client: Client): Promise<{
   inactive: number;
   outOfStock: number;
   featured: number;
+  lowStock: number;
 }> {
-  const [total, active, inactive, outOfStock, featured] = await Promise.all([
+  const [total, active, inactive, outOfStock, featured, stockLevels] = await Promise.all([
     client.from("products").select("id", { count: "exact", head: true }),
     client.from("products").select("id", { count: "exact", head: true }).eq("active", true),
     client.from("products").select("id", { count: "exact", head: true }).eq("active", false),
     client.from("products").select("id", { count: "exact", head: true }).eq("stock", 0),
     client.from("products").select("id", { count: "exact", head: true }).eq("featured", true),
+    client.from("products").select("stock, low_stock_threshold").eq("active", true).gt("stock", 0),
   ]);
+
+  // Comparar duas colunas (stock <= low_stock_threshold) não é expressável nos
+  // operadores padrão do PostgREST, então filtramos no servidor Node mesmo.
+  const lowStock = (stockLevels.data ?? []).filter((row) => row.stock <= row.low_stock_threshold).length;
 
   return {
     total: total.count ?? 0,
@@ -168,5 +183,19 @@ export async function countAll(client: Client): Promise<{
     inactive: inactive.count ?? 0,
     outOfStock: outOfStock.count ?? 0,
     featured: featured.count ?? 0,
+    lowStock,
   };
+}
+
+export async function findTopSelling(client: Client, limit: number): Promise<ProductRow[]> {
+  const { data, error } = await client
+    .from("products")
+    .select("*")
+    .eq("active", true)
+    .gt("sales_count", 0)
+    .order("sales_count", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return data ?? [];
 }

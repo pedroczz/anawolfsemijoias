@@ -36,6 +36,7 @@ export function SettingsProvider({
           bannerUrl: row.banner_url,
           seoTitle: row.seo_title,
           seoDescription: row.seo_description,
+          hideOutOfStock: row.hide_out_of_stock,
         });
       } catch {
         // Mantém as configurações atuais se a atualização falhar.

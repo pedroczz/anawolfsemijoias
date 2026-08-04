@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getPublicProducts } from "@/services/products.service";
+import { getSettings } from "@/services/settings.service";
 
 export type { Product } from "@/services/products.mapper";
 
@@ -9,5 +10,6 @@ export type { Product } from "@/services/products.mapper";
  */
 export async function getProducts() {
   const supabase = createClient();
-  return getPublicProducts(supabase);
+  const settings = await getSettings(supabase);
+  return getPublicProducts(supabase, { hideOutOfStock: settings.hideOutOfStock });
 }

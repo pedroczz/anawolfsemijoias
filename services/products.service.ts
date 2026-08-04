@@ -23,8 +23,18 @@ export type ProductFormInput = {
   featured: boolean;
   isNew: boolean;
   order: number;
+  /** Estoque igual ou abaixo disso dispara o alerta de "estoque baixo". */
+  lowStockThreshold: number;
   /** URLs já hospedadas no Storage, em ordem de exibição — a primeira é a imagem principal. */
   images: string[];
+};
+
+export type TopSellingProduct = {
+  id: string;
+  name: string;
+  sku: string;
+  salesCount: number;
+  mainImage: string | null;
 };
 
 export function validateProductInput(input: ProductFormInput): string[] {
@@ -39,6 +49,9 @@ export function validateProductInput(input: ProductFormInput): string[] {
   if (!Number.isInteger(input.stock) || input.stock < 0) errors.push("Estoque inválido.");
   if (input.weight !== null && (!Number.isFinite(input.weight) || input.weight < 0)) {
     errors.push("Peso inválido.");
+  }
+  if (!Number.isInteger(input.lowStockThreshold) || input.lowStockThreshold < 0) {
+    errors.push("Quantidade mínima inválida.");
   }
   return errors;
 }
@@ -61,11 +74,15 @@ function toRowInput(input: ProductFormInput) {
     featured: input.featured,
     is_new: input.isNew,
     display_order: input.order,
+    low_stock_threshold: input.lowStockThreshold,
   };
 }
 
-export async function getPublicProducts(client: Client): Promise<Product[]> {
-  const rows = await productsRepo.findAllActive(client);
+export async function getPublicProducts(
+  client: Client,
+  filters: { hideOutOfStock?: boolean } = {}
+): Promise<Product[]> {
+  const rows = await productsRepo.findAllActive(client, filters);
   return rows.map(mapProduct);
 }
 
@@ -147,9 +164,15 @@ export async function updateProduct(client: Client, id: string, input: ProductFo
   }
 }
 
-export async function updateStock(client: Client, id: string, stock: number): Promise<void> {
-  if (!Number.isInteger(stock) || stock < 0) throw new Error("Estoque inválido.");
-  await productsRepo.update(client, id, { stock });
+export async function getTopSellingProducts(client: Client, limit = 5): Promise<TopSellingProduct[]> {
+  const rows = await productsRepo.findTopSelling(client, limit);
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    sku: row.sku,
+    salesCount: row.sales_count,
+    mainImage: row.main_image,
+  }));
 }
 
 export async function deleteProduct(client: Client, id: string): Promise<void> {
@@ -220,6 +243,7 @@ export async function duplicateProduct(client: Client, id: string): Promise<stri
     is_new: current.is_new,
     display_order: current.display_order,
     main_image: newMainImage,
+    low_stock_threshold: current.low_stock_threshold,
   });
 
   if (newGallery.length > 0) {

@@ -65,7 +65,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="pt-BR" className={`${playfair.variable} ${inter.variable}`}>
       <body className="font-sans">
         <SettingsProvider initialSettings={initialSettings}>
-          <ProductsProvider initialProducts={initialProducts}>
+          <ProductsProvider initialProducts={initialProducts} hideOutOfStock={initialSettings.hideOutOfStock}>
             <CartProvider>
               <Header />
               <main>{children}</main>
