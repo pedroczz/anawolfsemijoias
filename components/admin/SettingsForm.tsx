@@ -90,6 +90,21 @@ export default function SettingsForm({ settings }: { settings: StoreSettings }) 
         </p>
       </Field>
 
+      <label className="flex items-start gap-2 text-sm text-vinho">
+        <input
+          type="checkbox"
+          checked={form.hideOutOfStock}
+          onChange={(e) => set("hideOutOfStock", e.target.checked)}
+          className="mt-0.5 h-4 w-4"
+        />
+        <span>
+          Ocultar produtos esgotados automaticamente do catálogo
+          <span className="block text-xs text-vinho/50">
+            Se desmarcado, produtos com estoque zerado continuam visíveis com a etiqueta &quot;Esgotado&quot;.
+          </span>
+        </span>
+      </label>
+
       <section className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <UploadImage
           label="Logo"

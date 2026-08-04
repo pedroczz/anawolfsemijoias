@@ -14,9 +14,11 @@ const ProductsContext = createContext<ProductsContextValue | null>(null);
 
 export function ProductsProvider({
   initialProducts,
+  hideOutOfStock = false,
   children,
 }: {
   initialProducts: Product[];
+  hideOutOfStock?: boolean;
   children: React.ReactNode;
 }) {
   const [products, setProducts] = useState<Product[]>(initialProducts);
@@ -28,7 +30,7 @@ export function ProductsProvider({
 
     async function refresh() {
       try {
-        const rows = await findAllActive(supabase);
+        const rows = await findAllActive(supabase, { hideOutOfStock });
         if (isMounted.current) setProducts(rows.map(mapProduct));
       } catch {
         // Mantém o catálogo atual se a atualização falhar (ex: rede instável).
@@ -47,7 +49,7 @@ export function ProductsProvider({
       isMounted.current = false;
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [hideOutOfStock]);
 
   const value: ProductsContextValue = {
     products,

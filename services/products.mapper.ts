@@ -22,6 +22,9 @@ export type Product = {
   order: number;
   images: string[];
   available: boolean;
+  lowStockThreshold: number;
+  lowStock: boolean;
+  salesCount: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -55,6 +58,9 @@ export function mapProduct(row: ProductWithRelations): Product {
     order: row.display_order,
     images,
     available: row.stock > 0,
+    lowStockThreshold: row.low_stock_threshold,
+    lowStock: row.stock > 0 && row.stock <= row.low_stock_threshold,
+    salesCount: row.sales_count,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

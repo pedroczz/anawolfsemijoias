@@ -48,6 +48,8 @@ export type Database = {
           is_new: boolean;
           display_order: number;
           main_image: string | null;
+          low_stock_threshold: number;
+          sales_count: number;
           created_at: string;
           updated_at: string;
         };
@@ -70,6 +72,8 @@ export type Database = {
           is_new?: boolean;
           display_order?: number;
           main_image?: string | null;
+          low_stock_threshold?: number;
+          sales_count?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -92,6 +96,8 @@ export type Database = {
           is_new?: boolean;
           display_order?: number;
           main_image?: string | null;
+          low_stock_threshold?: number;
+          sales_count?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -134,6 +140,7 @@ export type Database = {
           banner_url: string | null;
           seo_title: string;
           seo_description: string;
+          hide_out_of_stock: boolean;
           updated_at: string;
         };
         Insert: {
@@ -148,6 +155,7 @@ export type Database = {
           banner_url?: string | null;
           seo_title?: string;
           seo_description?: string;
+          hide_out_of_stock?: boolean;
           updated_at?: string;
         };
         Update: {
@@ -162,7 +170,44 @@ export type Database = {
           banner_url?: string | null;
           seo_title?: string;
           seo_description?: string;
+          hide_out_of_stock?: boolean;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      stock_movements: {
+        Row: {
+          id: string;
+          product_id: string;
+          type: "in" | "out" | "adjustment";
+          quantity: number;
+          previous_stock: number;
+          new_stock: number;
+          note: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          product_id: string;
+          type: "in" | "out" | "adjustment";
+          quantity: number;
+          previous_stock: number;
+          new_stock: number;
+          note?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          product_id?: string;
+          type?: "in" | "out" | "adjustment";
+          quantity?: number;
+          previous_stock?: number;
+          new_stock?: number;
+          note?: string | null;
+          created_by?: string | null;
+          created_at?: string;
         };
         Relationships: [];
       };
