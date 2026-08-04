@@ -11,3 +11,7 @@ body {
   background-color: #fdfbfa;
   color: #4e1233;
 }
+
+.admin-input {
+  @apply rounded-lg border border-rosa/40 bg-white px-3 py-2 text-sm text-vinho outline-none focus:border-vinho;
+}

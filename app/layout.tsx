@@ -5,10 +5,12 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { CartProvider } from "@/lib/cart-context";
 import { ProductsProvider } from "@/lib/products-context";
+import { SettingsProvider } from "@/lib/settings-context";
 import { getProducts } from "@/lib/products";
+import { createClient } from "@/lib/supabase/server";
+import { getSettings } from "@/services/settings.service";
 
-// Garante busca fresca do catálogo a cada request, independente de inferência
-// automática do Next a partir do fetch (que não roda quando o fallback é usado).
+// Garante busca fresca do catálogo e das configurações a cada request.
 export const dynamic = "force-dynamic";
 
 const playfair = Playfair_Display({
@@ -25,43 +27,52 @@ const inter = Inter({
 
 const siteUrl = "https://anawolfsemijoias.vercel.app";
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: "Ana Wolf Semijoias e Pratas",
-  description: "Semijoias com brilho de verdade, para o seu dia a dia.",
-  icons: {
-    icon: "/icon.svg",
-  },
-  openGraph: {
-    title: "Ana Wolf Semijoias e Pratas",
-    description: "Semijoias com brilho de verdade, para o seu dia a dia.",
-    url: siteUrl,
-    siteName: "Ana Wolf Semijoias e Pratas",
-    images: [{ url: "/og.png", width: 1200, height: 630 }],
-    locale: "pt_BR",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Ana Wolf Semijoias e Pratas",
-    description: "Semijoias com brilho de verdade, para o seu dia a dia.",
-    images: ["/og.png"],
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const supabase = createClient();
+  const settings = await getSettings(supabase);
+  const ogImage = settings.bannerUrl ?? "/og.png";
+
+  return {
+    metadataBase: new URL(siteUrl),
+    title: settings.seoTitle,
+    description: settings.seoDescription,
+    icons: {
+      icon: "/icon.svg",
+    },
+    openGraph: {
+      title: settings.seoTitle,
+      description: settings.seoDescription,
+      url: siteUrl,
+      siteName: settings.storeName,
+      images: [{ url: ogImage, width: 1200, height: 630 }],
+      locale: "pt_BR",
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: settings.seoTitle,
+      description: settings.seoDescription,
+      images: [ogImage],
+    },
+  };
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const initialProducts = await getProducts();
+  const supabase = createClient();
+  const [initialProducts, initialSettings] = await Promise.all([getProducts(), getSettings(supabase)]);
 
   return (
     <html lang="pt-BR" className={`${playfair.variable} ${inter.variable}`}>
       <body className="font-sans">
-        <ProductsProvider initialProducts={initialProducts}>
-          <CartProvider>
-            <Header />
-            <main>{children}</main>
-            <Footer />
-          </CartProvider>
-        </ProductsProvider>
+        <SettingsProvider initialSettings={initialSettings}>
+          <ProductsProvider initialProducts={initialProducts}>
+            <CartProvider>
+              <Header />
+              <main>{children}</main>
+              <Footer />
+            </CartProvider>
+          </ProductsProvider>
+        </SettingsProvider>
       </body>
     </html>
   );

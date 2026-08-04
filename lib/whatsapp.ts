@@ -1,25 +1,14 @@
 import type { Product } from "@/lib/products";
+import { buildWhatsAppMessage, type StoreSettings } from "@/services/settings.service";
 
-const STORE_WHATSAPP = "5596991871516";
-
-const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-
-export function buildOrderMessage(products: Product[]): string {
-  const lines = products.map((product) => `• ${product.name} — ${currency.format(product.price)}`);
-  const total = products.reduce((sum, product) => sum + product.price, 0);
-
-  const message = [
-    "Olá! Gostaria de fazer o seguinte pedido na Ana Wolf Semijoias e Pratas:",
-    "",
-    ...lines,
-    "",
-    `Total: ${currency.format(total)}`,
-  ].join("\n");
-
-  return message;
+export function effectivePrice(product: Product): number {
+  return product.promoPrice ?? product.price;
 }
 
-export function buildOrderWhatsAppUrl(products: Product[]): string {
-  const message = buildOrderMessage(products);
-  return `https://wa.me/${STORE_WHATSAPP}?text=${encodeURIComponent(message)}`;
+export function buildOrderWhatsAppUrl(products: Product[], settings: StoreSettings): string {
+  const items = products.map((product) => ({ name: product.name, price: effectivePrice(product) }));
+  const total = items.reduce((sum, item) => sum + item.price, 0);
+  const message = buildWhatsAppMessage(settings.whatsappMessageTemplate, settings.storeName, items, total);
+  const digits = settings.whatsapp.replace(/\D/g, "");
+  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
