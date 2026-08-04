@@ -3,9 +3,11 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import { MEDIA_BUCKET, extractPathFromUrl, sanitizeFileName } from "@/services/storage.service";
+import { MEDIA_BUCKET, extractPathFromUrl } from "@/services/storage.service";
+import { validateUploadFile, buildUploadPath, uploadFileWithProgress } from "@/services/import/upload";
+import { importImageFromUrlAction } from "@/app/admin/(dashboard)/produtos/import-actions";
 
-type ImageItem = { url: string; uploading?: boolean };
+type ImageItem = { url: string; uploading?: boolean; progress?: number };
 
 export default function ImageDropzone({
   initialImages,
@@ -18,6 +20,8 @@ export default function ImageDropzone({
 }) {
   const [items, setItems] = useState<ImageItem[]>(initialImages.map((url) => ({ url })));
   const [error, setError] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState("");
+  const [importingUrl, setImportingUrl] = useState(false);
   const dragIndex = useRef<number | null>(null);
 
   function emitChange(next: ImageItem[]) {
@@ -29,16 +33,22 @@ export default function ImageDropzone({
     const supabase = createClient();
 
     for (const file of Array.from(files)) {
-      const placeholder: ImageItem = { url: URL.createObjectURL(file), uploading: true };
+      const validationError = validateUploadFile(file);
+      if (validationError) {
+        setError(`"${file.name}": ${validationError}`);
+        continue;
+      }
+
+      const placeholder: ImageItem = { url: URL.createObjectURL(file), uploading: true, progress: 0 };
       setItems((prev) => [...prev, placeholder]);
 
-      const path = `${folder}/${crypto.randomUUID()}-${sanitizeFileName(file.name)}`;
-      const { error: uploadError } = await supabase.storage.from(MEDIA_BUCKET).upload(path, file, {
-        cacheControl: "3600",
-        upsert: false,
-      });
+      const path = buildUploadPath(folder, file);
 
-      if (uploadError) {
+      try {
+        await uploadFileWithProgress(supabase, path, file, (percent) => {
+          setItems((prev) => prev.map((item) => (item === placeholder ? { ...item, progress: percent } : item)));
+        });
+      } catch {
         setError(`Falha ao enviar "${file.name}".`);
         setItems((prev) => {
           const next = prev.filter((item) => item !== placeholder);
@@ -55,6 +65,28 @@ export default function ImageDropzone({
         return next;
       });
     }
+  }
+
+  async function handleImportFromUrl(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!imageUrl.trim()) return;
+
+    setError(null);
+    setImportingUrl(true);
+    const result = await importImageFromUrlAction(imageUrl.trim(), folder);
+    setImportingUrl(false);
+
+    if ("error" in result) {
+      setError(result.error);
+      return;
+    }
+
+    setImageUrl("");
+    setItems((prev) => {
+      const next = [...prev, { url: result.url }];
+      emitChange(next);
+      return next;
+    });
   }
 
   async function handleRemove(index: number) {
@@ -111,6 +143,23 @@ export default function ImageDropzone({
         />
       </label>
 
+      <form onSubmit={handleImportFromUrl} className="flex gap-2">
+        <input
+          type="url"
+          placeholder="Ou cole o link de uma imagem..."
+          value={imageUrl}
+          onChange={(event) => setImageUrl(event.target.value)}
+          className="admin-input flex-1"
+        />
+        <button
+          type="submit"
+          disabled={importingUrl || !imageUrl.trim()}
+          className="shrink-0 rounded-full border border-vinho/30 px-4 py-2 text-xs font-medium text-vinho transition hover:bg-vinho hover:text-creme disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {importingUrl ? "Baixando..." : "Adicionar"}
+        </button>
+      </form>
+
       {error && <p className="text-sm text-bordo">{error}</p>}
 
       {items.length > 0 && (
@@ -133,9 +182,15 @@ export default function ImageDropzone({
                 </span>
               )}
               {item.uploading && (
-                <span className="absolute inset-0 flex items-center justify-center bg-white/70 text-xs text-vinho">
-                  Enviando...
-                </span>
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-white/85 px-2">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-rosa/30">
+                    <div
+                      className="h-full rounded-full bg-vinho transition-all"
+                      style={{ width: `${item.progress ?? 0}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-vinho">{item.progress ?? 0}%</span>
+                </div>
               )}
               <button
                 type="button"

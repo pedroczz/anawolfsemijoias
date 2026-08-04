@@ -56,12 +56,20 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="font-display text-2xl text-vinho">Produtos</h1>
-        <Link
-          href="/admin/produtos/novo"
-          className="rounded-full bg-vinho px-4 py-2 text-sm font-semibold text-creme transition hover:bg-bordo"
-        >
-          Novo produto
-        </Link>
+        <div className="flex gap-3">
+          <Link
+            href="/admin/produtos/novo?import=instagram"
+            className="rounded-full border border-vinho/30 px-4 py-2 text-sm font-medium text-vinho transition hover:bg-vinho hover:text-creme"
+          >
+            Importar do Instagram
+          </Link>
+          <Link
+            href="/admin/produtos/novo"
+            className="rounded-full bg-vinho px-4 py-2 text-sm font-semibold text-creme transition hover:bg-bordo"
+          >
+            Novo produto
+          </Link>
+        </div>
       </div>
 
       <ProductFilters categories={categories} />
