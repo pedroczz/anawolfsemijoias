@@ -8,7 +8,8 @@ import { ProductsProvider } from "@/lib/products-context";
 import { SettingsProvider } from "@/lib/settings-context";
 import { getProducts } from "@/lib/products";
 import { createClient } from "@/lib/supabase/server";
-import { getSettings } from "@/services/settings.service";
+import { getSettings, DEFAULT_SETTINGS, type StoreSettings } from "@/services/settings.service";
+import type { Product } from "@/services/products.mapper";
 
 // Garante busca fresca do catálogo e das configurações a cada request.
 export const dynamic = "force-dynamic";
@@ -27,9 +28,25 @@ const inter = Inter({
 
 const siteUrl = "https://anawolfsemijoias.vercel.app";
 
+/**
+ * Busca produtos e configurações com fallback seguro: se o Supabase estiver mal
+ * configurado ou indisponível, o site continua no ar (catálogo vazio / config
+ * padrão) em vez de derrubar a aplicação inteira. O erro real fica nos logs do
+ * servidor (Vercel → Runtime Logs) para diagnóstico.
+ */
+async function loadInitialData(): Promise<{ products: Product[]; settings: StoreSettings }> {
+  try {
+    const supabase = createClient();
+    const [products, settings] = await Promise.all([getProducts(), getSettings(supabase)]);
+    return { products, settings };
+  } catch (error) {
+    console.error("Falha ao carregar dados do Supabase (produtos/configurações):", error);
+    return { products: [], settings: DEFAULT_SETTINGS };
+  }
+}
+
 export async function generateMetadata(): Promise<Metadata> {
-  const supabase = createClient();
-  const settings = await getSettings(supabase);
+  const { settings } = await loadInitialData();
   const ogImage = settings.bannerUrl ?? "/og.png";
 
   return {
@@ -58,8 +75,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const supabase = createClient();
-  const [initialProducts, initialSettings] = await Promise.all([getProducts(), getSettings(supabase)]);
+  const { products: initialProducts, settings: initialSettings } = await loadInitialData();
 
   return (
     <html lang="pt-BR" className={`${playfair.variable} ${inter.variable}`}>
